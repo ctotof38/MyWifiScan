@@ -9,6 +9,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,7 +35,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.totof.mywifiscan.ui.theme.MyWifiScanTheme
@@ -45,7 +50,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyWifiScanTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    topBar = { TimeHeader() }
+                ) { innerPadding ->
                     WifiScannerScreen(modifier = Modifier.padding(innerPadding))
                 }
             }
@@ -94,13 +102,6 @@ fun WifiScannerScreen(modifier: Modifier = Modifier) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Scanner Réseau WIFI",
-            style = MaterialTheme.typography.headlineMedium
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
         Button(
             onClick = {
                 if (!hasPermission) {
@@ -145,6 +146,28 @@ fun WifiScannerScreen(modifier: Modifier = Modifier) {
                 DeviceItem(device)
             }
         }
+    }
+}
+
+@Composable
+fun TimeHeader() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.bandeau),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds
+        )
+        Text(
+            text = "scanner mon réseau",
+            style = MaterialTheme.typography.titleLarge,
+            color = Color.Black
+        )
     }
 }
 

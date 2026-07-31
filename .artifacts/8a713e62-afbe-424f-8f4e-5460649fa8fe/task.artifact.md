@@ -1,0 +1,4 @@
+- [x] Modify `TimeHeader` to show "scanner mon réseau" instead of time
+- [x] Remove title and spacer from `WifiScannerScreen`
+- [x] Clean up unused imports
+- [x] Verify changes
