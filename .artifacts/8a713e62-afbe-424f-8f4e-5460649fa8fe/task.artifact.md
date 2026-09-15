@@ -1,4 +1,4 @@
-- [x] Modify `TimeHeader` to show "scanner mon réseau" instead of time
-- [x] Remove title and spacer from `WifiScannerScreen`
-- [x] Clean up unused imports
-- [x] Verify changes
+- [x] Improve `getLatestRssi` logic in `NetworkScanner.kt`
+- [x] Add `ACCESS_WIFI_STATE` check/permission if missing (already in manifest)
+- [x] Verify real-time updates on a physical device
+- [x] Build and generate APK

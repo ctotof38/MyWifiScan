@@ -29,6 +29,14 @@ data class Device(
     val os: String = "Inconnu"
 )
 
+data class WifiNetwork(
+    val ssid: String,
+    val bssid: String,
+    val rssi: Int,
+    val frequency: Int,
+    val capabilities: String
+)
+
 class NetworkScanner(private val context: Context) {
 
     private val connectivityManager =
@@ -68,6 +76,47 @@ class NetworkScanner(private val context: Context) {
         }.awaitAll()
 
         devicesWithOs.sortedBy { it.ip }
+    }
+
+    suspend fun scanWifiNetworks(): List<WifiNetwork> = withContext(Dispatchers.IO) {
+        try {
+            wifiManager.startScan()
+            delay(1000)
+            wifiManager.scanResults.map {
+                WifiNetwork(
+                    ssid = it.SSID ?: "Inconnu",
+                    bssid = it.BSSID ?: "Inconnu",
+                    rssi = it.level,
+                    frequency = it.frequency,
+                    capabilities = it.capabilities ?: ""
+                )
+            }.sortedByDescending { it.rssi }
+        } catch (e: SecurityException) {
+            emptyList()
+        }
+    }
+
+    fun getLatestRssi(bssid: String): Int {
+        try {
+            // 1. Si c'est le réseau auquel on est actuellement connecté, 
+            // on obtient une mise à jour instantanée et très fréquente.
+            val connectionInfo = wifiManager.connectionInfo
+            if (connectionInfo != null && connectionInfo.bssid == bssid) {
+                return connectionInfo.rssi
+            }
+            
+            // 2. Sinon, on demande un nouveau scan. 
+            // Note: Android limite à 4 scans toutes les 2 minutes pour les apps au premier plan.
+            wifiManager.startScan()
+            
+            // 3. On retourne la dernière valeur connue pour ce BSSID
+            val results = wifiManager.scanResults
+            return results.find { it.BSSID == bssid }?.level ?: -100
+        } catch (e: SecurityException) {
+            return -100
+        } catch (e: Exception) {
+            return -100
+        }
     }
 
     private suspend fun performPingSweep(foundDevices: ConcurrentHashMap<String, Device>) = coroutineScope {
@@ -230,5 +279,19 @@ class NetworkScanner(private val context: Context) {
         }
 
         device.copy(os = guessedOS)
+    }
+
+    suspend fun measureLatency(ip: String): Long = withContext(Dispatchers.IO) {
+        val start = System.currentTimeMillis()
+        try {
+            val address = InetAddress.getByName(ip)
+            if (address.isReachable(1000)) {
+                System.currentTimeMillis() - start
+            } else {
+                -1L
+            }
+        } catch (e: Exception) {
+            -1L
+        }
     }
 }

@@ -1,20 +1,23 @@
-# Implementation Plan - Add Time Header and Style Title
+# Implementation Plan - Fix Real-time Signal Updates
 
-Add a top header bar with a background image and real-time clock, and update the main screen title's style.
+Address the issue where the RSSI gauge does not update when moving away from the network.
 
 ## Proposed Changes
 
 ### [app]
 
-#### [MODIFY] [MainActivity.kt](file:///home/ocde6223/AndroidStudioProjects/MyWifiScan/app/src/main/java/com/totof/mywifiscan/MainActivity.kt)
-- Add `TimeHeader` composable to display the current time with `bandeau.png` as background.
-- Integrate `TimeHeader` into the `Scaffold`'s `topBar`.
-- Update the title "Scanner Réseau WIFI" in `WifiScannerScreen` to be black and use a smaller font size (`titleLarge`).
+#### [MODIFY] [NetworkScanner.kt](file:///home/ocde6223/AndroidStudioProjects/MyWifiScan/app/src/main/java/com/totof/mywifiscan/NetworkScanner.kt)
+- Improve `getLatestRssi(bssid: String)`:
+    - First, check if the BSSID matches the currently connected Wi-Fi. If so, use `WifiManager.connectionInfo.rssi` for immediate, high-frequency updates.
+    - Otherwise, trigger a new Wi-Fi scan using `startScan()`. Note that this is throttled by Android (4 scans per 2 minutes in the foreground).
+    - Safely fetch results from `scanResults`.
+- Add proper permission handling (SecurityException) for these calls.
 
 ## Verification Plan
 
 ### Manual Verification
-- Deploy the app to a device or emulator.
-- Verify that the header appears at the very top with the background image.
-- Verify that the time updates every second.
-- Verify that the "Scanner Réseau WIFI" title is black and smaller than before.
+- Deploy to a physical device.
+- Open the signal detail screen for the **connected** network.
+- Move away from the router and verify the gauge and dBm value update instantly.
+- Open the detail screen for a **non-connected** network.
+- Move away and verify that the signal eventually updates (after the system allows a new scan).

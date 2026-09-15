@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">MyWifiScan par Christophe Démottié</string>
-    <string name="icon_name">Wifi Scanner</string>
+    <string name="app_name">Network scanner par Christophe Démottié</string>
+    <string name="icon_name">Network Scan</string>
 </resources>
