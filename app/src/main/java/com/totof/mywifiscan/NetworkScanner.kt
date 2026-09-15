@@ -6,11 +6,13 @@ import android.net.NetworkCapabilities
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
+import android.os.Build
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -19,15 +21,16 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.seconds
 
-data class Device(
-    val ip: String,
-    val mac: String = "Inconnu (Restreint)",
-    val name: String = "Inconnu",
-    val model: String? = null,
-    val type: String = "Ping",
-    val os: String = "Inconnu"
-)
+    data class Device(
+        val ip: String,
+        val mac: String = "Inconnu (Restreint)",
+        val name: String = "Inconnu",
+        val model: String? = null,
+        val type: String = "Ping",
+        val os: String = "Inconnu",
+    )
 
 data class WifiNetwork(
     val ssid: String,
@@ -62,11 +65,11 @@ class NetworkScanner(private val context: Context) {
         val foundDevices = ConcurrentHashMap<String, Device>()
 
         coroutineScope {
-            async { discoverUpnp(foundDevices) }
-            async { discoverMdns(foundDevices) }
+            launch { discoverUpnp(foundDevices) }
+            launch { discoverMdns(foundDevices) }
             val pingJob = async { performPingSweep(foundDevices) }
 
-            delay(3000)
+            delay(3.seconds)
             pingJob.await()
         }
 
@@ -80,8 +83,9 @@ class NetworkScanner(private val context: Context) {
 
     suspend fun scanWifiNetworks(): List<WifiNetwork> = withContext(Dispatchers.IO) {
         try {
+            @Suppress("DEPRECATION")
             wifiManager.startScan()
-            delay(1000)
+            delay(1.seconds)
             wifiManager.scanResults.map {
                 WifiNetwork(
                     ssid = it.SSID ?: "Inconnu",
@@ -100,6 +104,7 @@ class NetworkScanner(private val context: Context) {
         try {
             // 1. Si c'est le réseau auquel on est actuellement connecté, 
             // on obtient une mise à jour instantanée et très fréquente.
+            @Suppress("DEPRECATION")
             val connectionInfo = wifiManager.connectionInfo
             if (connectionInfo != null && connectionInfo.bssid == bssid) {
                 return connectionInfo.rssi
@@ -107,6 +112,7 @@ class NetworkScanner(private val context: Context) {
             
             // 2. Sinon, on demande un nouveau scan. 
             // Note: Android limite à 4 scans toutes les 2 minutes pour les apps au premier plan.
+            @Suppress("DEPRECATION")
             wifiManager.startScan()
             
             // 3. On retourne la dernière valeur connue pour ce BSSID
@@ -120,6 +126,7 @@ class NetworkScanner(private val context: Context) {
     }
 
     private suspend fun performPingSweep(foundDevices: ConcurrentHashMap<String, Device>) = coroutineScope {
+        @Suppress("DEPRECATION")
         val ipAddress = wifiManager.dhcpInfo.ipAddress
         if (ipAddress == 0) return@coroutineScope
 
@@ -203,25 +210,22 @@ class NetworkScanner(private val context: Context) {
         val discoveryListener = object : NsdManager.DiscoveryListener {
             override fun onDiscoveryStarted(regType: String) {}
             override fun onServiceFound(service: NsdServiceInfo) {
-                nsdManager.resolveService(service, object : NsdManager.ResolveListener {
-                    override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {}
-                    override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-                        val ip = serviceInfo.host.hostAddress ?: return
-                        val name = serviceInfo.serviceName
-                        val existing = foundDevices[ip]
-                        val osGuess = when {
-                            name.contains("Android", ignoreCase = true) -> "Android"
-                            name.contains("iPhone", ignoreCase = true) || name.contains("iPad", ignoreCase = true) -> "iOS"
-                            name.contains("MacBook", ignoreCase = true) || name.contains("Mac", ignoreCase = true) -> "macOS"
-                            else -> existing?.os ?: "Inconnu"
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    nsdManager.resolveService(service, context.mainExecutor, object : NsdManager.ResolveListener {
+                        override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {}
+                        override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
+                            handleResolvedService(serviceInfo, foundDevices)
                         }
-                        foundDevices[ip] = (existing ?: Device(ip = ip)).copy(
-                            name = name,
-                            type = "mDNS",
-                            os = osGuess
-                        )
-                    }
-                })
+                    })
+                } else {
+                    @Suppress("DEPRECATION")
+                    nsdManager.resolveService(service, object : NsdManager.ResolveListener {
+                        override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {}
+                        override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
+                            handleResolvedService(serviceInfo, foundDevices)
+                        }
+                    })
+                }
             }
             override fun onServiceLost(service: NsdServiceInfo) {}
             override fun onDiscoveryStopped(regType: String) {}
@@ -238,6 +242,24 @@ class NetworkScanner(private val context: Context) {
             nsdManager.discoverServices("_googlecast._tcp.", NsdManager.PROTOCOL_DNS_SD, discoveryListener)
             nsdManager.discoverServices("_smb._tcp.", NsdManager.PROTOCOL_DNS_SD, discoveryListener)
         } catch (e: Exception) {}
+    }
+
+    private fun handleResolvedService(serviceInfo: NsdServiceInfo, foundDevices: ConcurrentHashMap<String, Device>) {
+        @Suppress("DEPRECATION")
+        val ip = serviceInfo.host.hostAddress ?: return
+        val name = serviceInfo.serviceName
+        val existing = foundDevices[ip]
+        val osGuess = when {
+            name.contains("Android", ignoreCase = true) -> "Android"
+            name.contains("iPhone", ignoreCase = true) || name.contains("iPad", ignoreCase = true) -> "iOS"
+            name.contains("MacBook", ignoreCase = true) || name.contains("Mac", ignoreCase = true) -> "macOS"
+            else -> existing?.os ?: "Inconnu"
+        }
+        foundDevices[ip] = (existing ?: Device(ip = ip)).copy(
+            name = name,
+            type = "mDNS",
+            os = osGuess
+        )
     }
 
     private fun isPortOpen(ip: String, port: Int, timeout: Int = 200): Boolean {

@@ -36,13 +36,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -68,6 +69,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.time.Duration.Companion.seconds
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -163,7 +165,7 @@ fun WifiScannerScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            TabRow(selectedTabIndex = scanMode) {
+            SecondaryTabRow(selectedTabIndex = scanMode) {
                 Tab(selected = scanMode == 0, onClick = { scanMode = 0 }) {
                     Text("Appareils", modifier = Modifier.padding(12.dp))
                 }
@@ -251,7 +253,7 @@ fun WifiNetworkItem(network: WifiNetwork, onClick: () -> Unit) {
                 .fillMaxWidth()
         ) {
             Text(
-                text = "SSID: ${if (network.ssid.isEmpty()) "fontanilibus" else network.ssid}", // Using image example if empty
+                text = "SSID: ${network.ssid.ifEmpty { "fontanilibus" }}", // Using image example if empty
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                 color = Color.White
             )
@@ -299,10 +301,10 @@ fun WifiNetworkItem(network: WifiNetwork, onClick: () -> Unit) {
 }
 
 fun frequencyToChannel(freq: Int): Int {
-    return when {
-        freq == 2484 -> 14
-        freq in 2412..2472 -> (freq - 2412) / 5 + 1
-        freq in 5170..5825 -> (freq - 5170) / 5 + 34
+    return when(freq) {
+        2484 -> 14
+        in 2412..2472 -> (freq - 2412) / 5 + 1
+        in 5170..5825 -> (freq - 5170) / 5 + 34
         else -> 0
     }
 }
@@ -324,7 +326,7 @@ fun SignalMeterScreen(network: WifiNetwork, scanner: NetworkScanner, onBack: () 
     LaunchedEffect(Unit) {
         while (true) {
             currentRssi = scanner.getLatestRssi(network.bssid)
-            delay(1000)
+            delay(1.seconds)
         }
     }
 
@@ -358,7 +360,7 @@ fun SignalMeterScreen(network: WifiNetwork, scanner: NetworkScanner, onBack: () 
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = if (network.ssid.isEmpty()) "fontanilibus" else network.ssid,
+            text = network.ssid.ifEmpty { "fontanilibus" },
             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
             color = Color.White
         )
@@ -468,7 +470,7 @@ fun SignalGauge(rssi: Int) {
         
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "${rssi}",
+                text = "$rssi",
                 style = MaterialTheme.typography.displayLarge.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 64.sp
@@ -486,12 +488,12 @@ fun SignalGauge(rssi: Int) {
 
 @Composable
 fun DeviceLatencyMeterScreen(device: Device, scanner: NetworkScanner, onBack: () -> Unit) {
-    var latency by remember { mutableStateOf(-1L) }
+    var latency by remember { mutableLongStateOf(-1L) }
 
     LaunchedEffect(Unit) {
         while (true) {
             latency = scanner.measureLatency(device.ip)
-            delay(1000)
+            delay(1.seconds)
         }
     }
 
@@ -581,14 +583,6 @@ fun GaugeCanvas(targetAngle: Float) {
             
             drawCircle(Color.DarkGray, radius = 10.dp.toPx(), center = center)
         }
-    }
-}
-
-fun getRssiColor(rssi: Int): Color {
-    return when {
-        rssi > -60 -> Color(0xFF4CAF50) // Green
-        rssi > -80 -> Color(0xFFFFC107) // Yellow
-        else -> Color(0xFFF44336) // Red
     }
 }
 
