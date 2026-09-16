@@ -37,7 +37,7 @@ data class WifiNetwork(
     val bssid: String,
     val rssi: Int,
     val frequency: Int,
-    val capabilities: String
+    val capabilities: String,
 )
 
 class NetworkScanner(private val context: Context) {
@@ -86,16 +86,17 @@ class NetworkScanner(private val context: Context) {
             @Suppress("DEPRECATION")
             wifiManager.startScan()
             delay(1.seconds)
-            wifiManager.scanResults.map {
+            @Suppress("DEPRECATION")
+            wifiManager.scanResults.asSequence().map {
                 WifiNetwork(
                     ssid = it.SSID ?: "Inconnu",
                     bssid = it.BSSID ?: "Inconnu",
                     rssi = it.level,
                     frequency = it.frequency,
-                    capabilities = it.capabilities ?: ""
+                    capabilities = it.capabilities ?: "",
                 )
-            }.sortedByDescending { it.rssi }
-        } catch (e: SecurityException) {
+            }.sortedByDescending { it.rssi }.toList()
+        } catch (_: SecurityException) {
             emptyList()
         }
     }
@@ -106,7 +107,7 @@ class NetworkScanner(private val context: Context) {
             // on obtient une mise à jour instantanée et très fréquente.
             @Suppress("DEPRECATION")
             val connectionInfo = wifiManager.connectionInfo
-            if (connectionInfo != null && connectionInfo.bssid == bssid) {
+            if ((connectionInfo != null) && (connectionInfo.bssid == bssid)) {
                 return connectionInfo.rssi
             }
             
@@ -118,7 +119,7 @@ class NetworkScanner(private val context: Context) {
             // 3. On retourne la dernière valeur connue pour ce BSSID
             val results = wifiManager.scanResults
             return results.find { it.BSSID == bssid }?.level ?: -100
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             return -100
         } catch (e: Exception) {
             return -100
@@ -135,7 +136,7 @@ class NetworkScanner(private val context: Context) {
             "%d.%d.%d.",
             ipAddress and 0xFF,
             (ipAddress shr 8) and 0xFF,
-            (ipAddress shr 16) and 0xFF
+            (ipAddress shr 16) and 0xFF,
         )
 
         (1..254).map { i ->
@@ -155,7 +156,7 @@ class NetworkScanner(private val context: Context) {
                             name = updatedName
                         )
                     }
-                } catch (e: Exception) { }
+                } catch (_: Exception) { }
             }
         }.awaitAll()
     }
@@ -211,12 +212,17 @@ class NetworkScanner(private val context: Context) {
             override fun onDiscoveryStarted(regType: String) {}
             override fun onServiceFound(service: NsdServiceInfo) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    nsdManager.resolveService(service, context.mainExecutor, object : NsdManager.ResolveListener {
-                        override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {}
-                        override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-                            handleResolvedService(serviceInfo, foundDevices)
-                        }
-                    })
+                    @Suppress("DEPRECATION")
+                    nsdManager.resolveService(
+                        service,
+                        context.mainExecutor,
+                        object : NsdManager.ResolveListener {
+                            override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {}
+                            override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
+                                handleResolvedService(serviceInfo, foundDevices)
+                            }
+                        },
+                    )
                 } else {
                     @Suppress("DEPRECATION")
                     nsdManager.resolveService(service, object : NsdManager.ResolveListener {

@@ -63,7 +63,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -72,6 +71,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.totof.mywifiscan.ui.theme.MyWifiScanTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -125,7 +125,7 @@ fun WifiScannerScreen(
 
     var devices by remember { mutableStateOf<List<Device>>(emptyList()) }
     var wifiNetworks by remember { mutableStateOf<List<WifiNetwork>>(emptyList()) }
-    var scanMode by remember { mutableIntStateOf(0) } // 0: Appareils, 1: Bornes WIFI
+    var scanMode by remember { mutableIntStateOf(0) } // 0: Appareils, 1: Bornes WI-FI
 
     var isScanning by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
