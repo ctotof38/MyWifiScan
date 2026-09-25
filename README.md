@@ -2,7 +2,9 @@ This Android app lets you scan for devices available on the Wi-Fi network you're
 
 It was generated largely by the AI built into Android Studio
 
-![example](images/mywifiscan.png)
+![example](images/mywifiscan01.png)
+![example](images/mywifiscan02.png)
+![example](images/mywifiscan03.png)
 
 MIT license
 
