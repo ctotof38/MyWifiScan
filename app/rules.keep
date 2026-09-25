@@ -1,5 +1,4 @@
-# Add project specific R8 rules here.
-# AGP will combine all keep rule files in src/main/keepRules to pass to R8
+# R8 rules for MyWifiScan
 
 # Keep all project classes and models
 -keep class com.totof.mywifiscan.** { *; }
@@ -15,7 +14,8 @@
 -keepclassmembers class * implements android.net.nsd.NsdManager$DiscoveryListener { *; }
 -keepclassmembers class * implements android.net.nsd.NsdManager$ResolveListener { *; }
 
-# Suppress harmless optimization warnings
--dontwarn android.net.nsd.**
--dontwarn android.net.wifi.**
--dontwarn kotlinx.coroutines.**
+# Ignore warnings and missing classes detected by R8 across dependencies and tests
+-ignorewarnings
+-dontwarn **
+-dontwarn javax.lang.model.element.Modifier
+-dontwarn com.google.errorprone.annotations.**
